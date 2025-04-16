@@ -28,7 +28,7 @@ from .stream import define_stream
 AxiAWBus, AxiAWTransaction, AxiAWSource, AxiAWSink, AxiAWMonitor = define_stream("AxiAW",
     signals=["awid", "awaddr", "awlen", "awsize", "awburst", "awvalid", "awready", "awprot"],
     optional_signals=["awlock", "awcache", "awqos", "awregion", "awuser"],
-    signal_widths={"awid": 4, "awlen": 8, "awsize": 3, "awburst": 2, "awlock": 1,
+    signal_widths={"awid": 8, "awlen": 8, "awsize": 3, "awburst": 2, "awlock": 1,
         "awcache": 4, "awprot": 3, "awqos": 4, "awregion": 4}
 )
 
