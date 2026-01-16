@@ -480,9 +480,11 @@ class AxiMasterWrite(Region, Reset):
             aligned_addr = (cmd.address // num_bytes) * num_bytes
             word_addr = (cmd.address // self.byte_lanes) * self.byte_lanes
 
-            start_offset = cmd.address % self.byte_lanes
-            end_offset = ((cmd.address + len(cmd.data) - 1) % self.byte_lanes) + 1
+            #start_offset = cmd.address % self.byte_lanes
+            start_offset = 0
 
+            #end_offset = ((cmd.address + len(cmd.data) - 1) % self.byte_lanes) + 1
+            end_offset = start_offset + len(cmd.data)
             cycles = (len(cmd.data) + (cmd.address % num_bytes) + num_bytes-1) // num_bytes
 
             cur_addr = cmd.address
@@ -590,22 +592,12 @@ class AxiMasterWrite(Region, Reset):
             b = await self.b_channel.recv()
 
             bid = int(getattr(b, 'bid', 0))
-            #bid = int(self.bus.bid.value)
-            # Ignore BID, assume single outstanding write
-            if sum(self.active_id.values()) > 0:
-            # consume any active transaction
-                for k in self.active_id:
-                    if self.active_id[k] > 0:
-                        self.active_id[k] -= 1
-                        self.tag_context_manager.put_resp(k, b)
-                        break
-            else:
-                 self.log.warning("Write response with no active transaction")
+            #self.log.info("WRITE RESP received: BID = 0x%x BVALID=%d", bid, int(b.bvalid))
+            # b valid not an attribute of axib transaction 
+            self.log.info("WRITE RESP received: BID = 0x%x ", bid)
+            assert self.active_id[bid] > 0, "unexpected burst ID"
 
-
-            #assert self.active_id[bid] > 0, "unexpected burst ID"
-
-            #self.tag_context_manager.put_resp(bid, b)
+            self.tag_context_manager.put_resp(bid, b)
 
     async def _process_write_resp_id(self, context, cmd):
         bid = context.current_tag
@@ -625,9 +617,9 @@ class AxiMasterWrite(Region, Reset):
             if burst_user is not None:
                 user.append(burst_user)
 
-           # assert self.active_id[bid] > 0, "unexpected burst ID"
+            assert self.active_id[bid] > 0, "unexpected burst ID"
 
-            #self.active_id[bid] -= 1
+            self.active_id[bid] -= 1
 
             self.log.info("Write burst complete bid: 0x%x bresp: %s", bid, burst_resp)
 
@@ -637,7 +629,7 @@ class AxiMasterWrite(Region, Reset):
         self.log.info("Write complete addr: 0x%08x prot: %s resp: %s length: %d",
                 cmd.address, cmd.prot, resp, cmd.length)
 
-        write_resp = AxiWriteResp(cmd.address, cmd.length, resp, user) #user->None
+        write_resp = AxiWriteResp(cmd.address, cmd.length, resp, user)
 
         cmd.event.set(write_resp)
 
